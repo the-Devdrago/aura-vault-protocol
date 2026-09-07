@@ -3,6 +3,7 @@
 extern crate std;
 
 use soroban_sdk::{testutils::Address as _, Address, Env, Vec};
+use soroban_sdk::testutils::Ledger as _;
 use soroban_sdk::token::StellarAssetClient;
 
 use crate::{AuraVault, AuraVaultClient, VaultError};
@@ -65,7 +66,7 @@ fn mint(env: &Env, token: &Address, admin: &Address, recipient: &Address, amount
 fn test_double_init_returns_already_initialized() {
     let (env, vault, admin, token) = setup();
     let signers: Vec<Address> = Vec::new(&env);
-    let result = vault.try_initialize(&admin, &token, &signers);
+    let result = vault.try_initialize(&admin, &token, &signers, &soroban_sdk::String::from_str(&env, "AuraVault"), &soroban_sdk::String::from_str(&env, "AURA"));
     assert_eq!(result, Err(Ok(VaultError::AlreadyInitialized)));
 }
 

@@ -97,6 +97,10 @@ pub enum DataKey {
     MultiSigVote(u64, Address),
 }
 
+pub const ADMIN_ROLE: u32 = 1 << 0;
+pub const KEEPER_ROLE: u32 = 1 << 1;
+pub const GUARDIAN_ROLE: u32 = 1 << 2;
+
 pub const DAY_IN_LEDGERS: u32 = 17_280;
 pub const INSTANCE_LIFETIME_THRESHOLD: u32 = DAY_IN_LEDGERS * 7;
 pub const INSTANCE_BUMP_AMOUNT: u32 = DAY_IN_LEDGERS * 30;
@@ -106,6 +110,10 @@ pub const PERSISTENT_BUMP_AMOUNT: u32 = DAY_IN_LEDGERS * 30;
 // ---------------------------------------------------------------------------
 // Instance-storage helpers
 // ---------------------------------------------------------------------------
+
+pub fn is_initialized(env: &Env) -> bool {
+    env.storage().instance().has(&DataKey::UnderlyingToken)
+}
 
 pub fn get_admin(env: &Env) -> Option<Address> {
     env.storage().instance().get(&DataKey::Admin)

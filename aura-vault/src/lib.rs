@@ -57,7 +57,8 @@ mod harvest_cooldown_test;
 #[cfg(test)]
 mod pause_lifecycle_test;
 #[cfg(test)]
-mod circuit_breaker_test;#[cfg(test)]
+mod circuit_breaker_test;
+#[cfg(test)]
 mod event_test;
 #[cfg(test)]
 mod event_snapshots;
@@ -72,7 +73,22 @@ mod cross_contract_safety_test;
 #[cfg(test)]
 mod reentrancy_test;
 
-use soroban_sdk::{contract, contractimpl, token, Address, Env, Vec, Symbol};
+use soroban_sdk::{contract, contractimpl, contractclient, token, Address, Env, Vec, Symbol};
+
+// ---------------------------------------------------------------------------
+// AuraPriceOracle external contract interface (Issue #348)
+//
+// The oracle contract must expose a `price(token)` entry point that returns
+// the current USD price of a token as an i128 scaled to 6 decimal places
+// (micro-USD, where 1_000_000 = $1.00) and the ledger timestamp of the last
+// update.
+// ---------------------------------------------------------------------------
+#[contractclient(name = "OracleClient")]
+pub trait OracleTrait {
+    /// Returns (price_in_micro_usd, updated_at_ledger_timestamp) for `token`.
+    /// `price` is scaled to 6 decimal places (1_000_000 = $1.00).
+    fn price(env: Env, token: Address) -> (i128, u64);
+}
 
 use storage::{
     bump_instance, bump_persistent, get_admin, get_balance, get_layout_version, get_token,
@@ -1073,15 +1089,16 @@ impl AuraVault {
         with_reentrancy_guard(&env, || {
             caller.require_auth();
 
-            if yield_amount <= 0 || underlying_amount <= 0 {
-                return Err(VaultError::ZeroAmount);
-            }
-            if get_admin(&env).is_none() {
-                return Err(VaultError::NotInitialized);
-            }
-            if storage_is_paused(&env) {
-                return Err(VaultError::VaultPaused);
-            }
+        if yield_amount <= 0 || underlying_amount <= 0 {
+            return Err(VaultError::ZeroAmount);
+        }
+        let stored_admin = get_admin(&env).ok_or(VaultError::NotInitialized)?;
+        if stored_admin != caller && !storage::has_role(&env, &caller, storage::KEEPER_ROLE) && !storage::has_role(&env, &caller, storage::ADMIN_ROLE) {
+            return Err(VaultError::UpgradeUnauthorized);
+        }
+        if storage_is_paused(&env) {
+            return Err(VaultError::VaultPaused);
+        }
 
             let total_shares = get_total_shares(&env);
             if total_shares == 0 {
@@ -2098,9 +2115,9 @@ impl AuraVault {
         get_proposal_status(&env, proposal_id).map(|status| {
             match status {
                 ProposalStatus::Pending => soroban_sdk::String::from_str(&env, "Pending"),
-                ProposalStatus::Approved => soroban_sdk::String::from_str(&env, "Approved"),
+                ProposalStatus::Ready => soroban_sdk::String::from_str(&env, "Approved"),
                 ProposalStatus::Executed => soroban_sdk::String::from_str(&env, "Executed"),
-                ProposalStatus::Rejected => soroban_sdk::String::from_str(&env, "Rejected"),
+                ProposalStatus::Expired => soroban_sdk::String::from_str(&env, "Rejected"),
             }
         })
     }
@@ -2151,7 +2168,10 @@ impl AuraVault {
             21 => Some(VaultError::QueueEntryNotFound.message()),
             22 => Some(VaultError::QueueUnbondingPending.message()),
             23 => Some(VaultError::InvalidWithdrawalFee.message()),
-            24 => Some(VaultError::CircuitBreakerTripped.message()),
+            24 => Some(VaultError::TransferFailed.message()),
+            25 => Some(VaultError::OraclePriceZero.message()),
+            26 => Some(VaultError::OraclePriceTooHigh.message()),
+            27 => Some(VaultError::OraclePriceStale.message()),
             28 => Some(VaultError::NotWhitelisted.message()),
             29 => Some(VaultError::BelowMinDeposit.message()),
             30 => Some(VaultError::Reentrancy.message()),

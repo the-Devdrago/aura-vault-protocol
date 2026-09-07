@@ -55,6 +55,25 @@ All mutating functions return `Result<_, VaultError>`. The following error codes
 | 10 | `StorageLayoutMismatch` | On-chain layout version does not match `CURRENT_LAYOUT_VERSION` |
 | 11 | `VaultPaused` | Mutating operation called while the vault is paused |
 | 12 | `BalanceMismatch` | Flash loan guard: actual token balance ≠ `total_deposited` |
+| 13 | `TimelockNotExpired` | Governance timelock has not elapsed |
+| 14 | `NotApproved` | Proposal has not reached required signature threshold |
+| 15 | `AlreadyVoted` | Signer already voted on this proposal |
+| 16 | `TvlCapExceeded` | Deposit would exceed the configured TVL cap |
+| 17 | `YieldTooSmall` | Yield rounds to zero per share — accumulate more before distributing |
+| 18 | `DistributionAccuracyError` | Rounding error exceeds 0.01% accuracy threshold |
+| 19 | `HarvestCooldown` | Harvest attempted before the cooldown period has elapsed |
+| 20 | `WithdrawalQueued` | Withdrawal queued; call `claim_queued_withdrawal` after unbonding |
+| 21 | `QueueEntryNotFound` | Queue entry does not exist or was already claimed |
+| 22 | `QueueUnbondingPending` | Queue entry is still within the unbonding period |
+| 23 | `InvalidWithdrawalFee` | Withdrawal fee exceeds the 5% maximum |
+| 24 | `TransferFailed` | Token transfer amount assertion failed (fee-on-transfer guard) |
+| 25 | `OraclePriceZero` | Oracle returned a zero price |
+| 26 | `OraclePriceTooHigh` | Oracle price exceeds sanity cap (possible manipulation) |
+| 27 | `OraclePriceStale` | Oracle price is older than the configured `max_age_secs` |
+| 28 | `NotWhitelisted` | Deposit attempted by an address not on the whitelist |
+| 29 | `BelowMinDeposit` | Deposit amount is below the configured minimum |
+| 30 | `OracleUnavailable` | Oracle unavailable; `total_assets_usd` returned fallback value 0 |
+| 31 | `CircuitBreakerTripped` | Share price moved more than the configured limit; vault auto-paused |
 
 ---
 
